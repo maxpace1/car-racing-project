@@ -2,6 +2,8 @@ import gymnasium as gym
 import pygame
 import sys
 
+from rewardFunction import computeLosses
+
 # Initialize Pygame
 pygame.init()
 
@@ -98,8 +100,12 @@ if __name__ == '__main__':
         action = [steering_wheel, gas, break_system]
         state, reward, terminated, truncated, info = env.step(action)
         counter += 1
-        total_reward += reward
-        print('State: {} Action:[{:+.1f}, {:+.1f}, {:+.1f}] Reward: {:.3f} Terminated: {} Truncated: {} Info: {}'.format(state, action[0], action[1], action[2], reward, terminated, truncated, info))
+
+        # adding state-based provided reward to action-based lossese
+        total_reward += (reward + computeLosses(action))
+        
+        print('Action:[Steer: {:+.1f}, Throttle: {:+.1f}, Brake: {:+.1f}] Cumulative Reward: {:.3f} Terminated: {}'.format(action[0], action[1], action[2], total_reward, terminated))
+
         if terminated:
             print("Restart game after {} timesteps. Total Reward: {}".format(counter, total_reward))
             counter = 0
