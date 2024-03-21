@@ -96,11 +96,11 @@ if __name__ == '__main__':
         check_events()  # Check for key events
         update_action()
         action = [steering_wheel, gas, break_system]
-        state, reward, done, info, _ = env.step(action)
+        state, reward, terminated, truncated, info = env.step(action)
         counter += 1
         total_reward += reward
-        print('Action:[{:+.1f}, {:+.1f}, {:+.1f}] Reward: {:.3f}'.format(action[0], action[1], action[2], reward))
-        if done:
+        print('State: {} Action:[{:+.1f}, {:+.1f}, {:+.1f}] Reward: {:.3f} Terminated: {} Truncated: {} Info: {}'.format(state, action[0], action[1], action[2], reward, terminated, truncated, info))
+        if terminated:
             print("Restart game after {} timesteps. Total Reward: {}".format(counter, total_reward))
             counter = 0
             total_reward = 0

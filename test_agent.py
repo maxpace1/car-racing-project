@@ -3,7 +3,7 @@ import sys
 from DQNAgent import DQNAgent
 from PPOAgent import PPOAgent
 from QTableAgent import QTableAgent
-
+from rewardFunction import computeReward
 class RandomAgent:
     def __init__(self, env):
         self.env = env
@@ -39,6 +39,7 @@ if __name__ == "__main__":
         action = agent.predict(observation)
         # Perform action on environment, observe state + reward
         observation, reward, terminated, truncated, info = env.step(action)
+        computeReward(observation, terminated)
         total_reward += reward
         if terminated:
             print("terminating")
