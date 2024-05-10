@@ -1,3 +1,5 @@
+import numpy as np
+
 """
 We assume our vehicle to be an electric RWD, powered by a single motor without a differential mechanism. This gives us scope to create a 'reward' function that assesses mechanical and electrical sources of loss given current action. This loss is invariant non-positive. 
 
@@ -15,32 +17,38 @@ low_rev_penalty_weight = 2
 high_rev_penalty_weight = 1
 braking_penalty_weight = 8
 
-def computeLosses(action):
-  """ Returns the non-positive loss (efficiency reward) attained by the current set of actions.
-  
-  Parameters:
-  action (list): Holds [steering [-1,+1], throttle [0,+1], braking [0,+1]] actuation
 
-  Returns:
-  int: reward of current action
-  """
-  steerActuation = action[0]
-  throttleActuation = action[1]
-  brakeActuation = action[2]
+def computeLosses(action, observation):
+    """Returns the non-positive loss (efficiency reward) attained by the current set of actions.
 
-  steering_loss = steering_penalty_weight * abs(steerActuation) * throttleActuation
-  
-  if throttleActuation < 0.5:
-    throttle_loss = low_rev_penalty_weight * throttleActuation
-  elif throttleActuation > 0.9:
-    throttle_loss = high_rev_penalty_weight * throttleActuation
-  else:
-    throttle_loss = 0
+    Parameters:
+    action (list): Holds [steering [-1,+1], throttle [0,+1], braking [0,+1]] actuation
 
-  braking_loss = braking_penalty_weight * brakeActuation * throttleActuation
+    Returns:
+    int: reward of current action
+    """
 
-  cumulative_losses = -(steering_loss + throttle_loss + braking_loss)
+    # check if action is discrete or continuous
+    if action is not np.ndarray:
+        steerActuation = -1 if action == 1 else 1 if action == 2 else 0
+        throttleActuation = 1 if action == 3 else 0
+        brakeActuation = 1 if action == 4 else 0
+    else:
+        steerActuation = action[0]
+        throttleActuation = action[1]
+        brakeActuation = action[2]
 
-  return cumulative_losses
+    steering_loss = steering_penalty_weight * abs(steerActuation) * throttleActuation
 
+    if throttleActuation < 0.5:
+        throttle_loss = low_rev_penalty_weight * throttleActuation
+    elif throttleActuation > 0.9:
+        throttle_loss = high_rev_penalty_weight * throttleActuation
+    else:
+        throttle_loss = 0
 
+    braking_loss = braking_penalty_weight * brakeActuation * throttleActuation
+
+    cumulative_losses = -(steering_loss + throttle_loss + braking_loss)
+
+    return cumulative_losses
