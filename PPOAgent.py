@@ -30,7 +30,7 @@ class PPOAgent:
         checkpoint_callback = CheckpointCallback(
             save_freq=10000, save_path="./models/", name_prefix="ppo_car_racing"
         )
-        self.model.learn(total_timesteps=100000, callback=checkpoint_callback)
+        self.model.learn(total_timesteps=1000000, callback=checkpoint_callback)
         self.model.save("ppo_car_racing")
 
     def predict(self, observation):
@@ -50,8 +50,8 @@ def make_env(render_mode="rgb_array"):
 
 # env = make_vec_env(env_id=make_env, n_envs=4)
 env = DummyVecEnv([lambda: make_env(render_mode="human")])
-env = VecFrameStack(env, n_stack=4)
-agent = PPOAgent(env, model="models/ppo_car_racing_80000_steps")
+env = VecFrameStack(env, n_stack=6)
+agent = PPOAgent(env, model="ppo_car_racing_480000_steps")
 observation = env.reset()
 # agent.train()
 while True:
