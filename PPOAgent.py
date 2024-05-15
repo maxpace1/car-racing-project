@@ -30,10 +30,10 @@ class PPOAgent:
 
     def train(self):
         checkpoint_callback = CheckpointCallback(
-            save_freq=10000, save_path="./models/", name_prefix="ppo_car_racing"
+            save_freq=10000, save_path="./models/", name_prefix="ppo_car_racing_eco"
         )
         self.model.learn(total_timesteps=1000000, callback=checkpoint_callback)
-        self.model.save("ppo_car_racing")
+        self.model.save("ppo_car_racing_final")
 
     def predict(self, observation):
         pass
@@ -80,17 +80,17 @@ def make_env(render_mode="rgb_array", custom_reward=None):
     return env
 
 
-env = make_vec_env(env_id=make_env, n_envs=4, custom_reward=computeLosses)
+env = make_vec_env(env_id=lambda: make_env(custom_reward=computeLosses), n_envs=4)
 # env = DummyVecEnv([lambda: make_env(render_mode="human", custom_reward=computeLosses)])
 env = VecFrameStack(env, n_stack=6)
-agent = PPOAgent(env, model="ppo_car_racing_480000_steps")
+agent = PPOAgent(env)
 observation = env.reset()
 agent.train()
-while True:
-    action, _states = agent.model.predict(observation)
-    observation, reward, done, info = env.step(action)
-    print(reward)
-    env.render()
+# while True:
+#     action, _states = agent.model.predict(observation)
+#     observation, reward, done, info = env.step(action)
+#     print(reward)
+#     env.render()
 
-    if done.any():
-        observation = env.reset()
+#     if done.any():
+#         observation = env.reset()
