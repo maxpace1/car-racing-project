@@ -43,8 +43,8 @@ def make_env(render_mode="rgb_array", custom_reward=None):
     env = gym.make(
         "CarRacing-v2",
         render_mode=render_mode,
-        lap_complete_percent=1,
-        domain_randomize=False,
+        lap_complete_percent=2,
+        domain_randomize=True,
         continuous=False,
     )
 
@@ -80,17 +80,19 @@ def make_env(render_mode="rgb_array", custom_reward=None):
     return env
 
 
-env = make_vec_env(env_id=lambda: make_env(custom_reward=computeLosses), n_envs=4)
-# env = DummyVecEnv([lambda: make_env(render_mode="human", custom_reward=computeLosses)])
+# env = make_vec_env(env_id=lambda: make_env(custom_reward=computeLosses), n_envs=4)
+env = DummyVecEnv([lambda: make_env(render_mode="human", custom_reward=computeLosses)])
 env = VecFrameStack(env, n_stack=6)
-agent = PPOAgent(env)
+agent = PPOAgent(env, model="ppo_car_racing_480000_steps")
 observation = env.reset()
-agent.train()
-# while True:
-#     action, _states = agent.model.predict(observation)
-#     observation, reward, done, info = env.step(action)
-#     print(reward)
-#     env.render()
-
-#     if done.any():
-#         observation = env.reset()
+# agent.train()
+tiles = 0
+while True:
+    action, _states = agent.model.predict(observation)
+    observation, reward, done, info = env.step(action)
+    if reward > 0:
+        tiles += 1
+        print(f"TILES: {tiles}")
+    env.render()
+    if done.any():
+        observation = env.reset()
