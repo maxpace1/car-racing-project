@@ -9,13 +9,15 @@ Vehicle efficiency is maximized using a coast-and-burn strategy to limit losses 
 - penalizing rev-ranges (0,0.5], (0.9,1.0]
 
 The weightages of these factors are configurable, and overall losses are to be considered alongside the goal of completing the track as quickly as possible, without leaving it.
+
+The loss is a value [0.0,1.0], representing the fraction of reward (if positive) to keep. A loss of 1.0 means none of the reward should be kept, while 0.0 means all of the reward is to be kept.
 """
 
-# All weights in range [0,10], severity proportional to weight
-steering_penalty_weight = 4
-low_rev_penalty_weight = 2
-high_rev_penalty_weight = 1
-braking_penalty_weight = 8
+# All weights in range [0,1], severity proportional to weight
+steering_penalty_weight = 0.4
+low_rev_penalty_weight = 0.2
+high_rev_penalty_weight = 0.1
+braking_penalty_weight = 0.8
 
 
 def computeLosses(action, observation):
@@ -49,6 +51,7 @@ def computeLosses(action, observation):
 
     braking_loss = braking_penalty_weight * brakeActuation * throttleActuation
 
-    cumulative_losses = -(steering_loss + throttle_loss + braking_loss)
+    cumulative_losses = (steering_loss + throttle_loss + braking_loss)
+    cumulative_losses = min(cumulative_losses, 1.0)
 
     return cumulative_losses

@@ -4,7 +4,7 @@ import cv2
 import time
 import csv
 import cur_Q_table
-import rewardFunction
+from rewardFunction import computeLosses
 
 class QTableAgent:
     def __init__(self, env):
@@ -16,7 +16,7 @@ class QTableAgent:
 
         # Define Q-table as dictionary per: 
         #    {< State>:[Action0, Action1, Action2, Action3, Action4]}
-        self.Q_table = {}
+        self.Q_table = cur_Q_table.Q_table
 
         # Define parameters
         self.alpha = 0.9  # learning rate
@@ -219,6 +219,9 @@ if __name__ == "__main__":
     # init timestep
     t = 1
 
+    # weightages for reward functions
+    # efficiencyWeight = [1, 0.75, 0.5, 0.25, 0]
+
     while not done and t < 300000:
         try:
             # Handle yet unseen states
@@ -231,6 +234,7 @@ if __name__ == "__main__":
 
             # Update rewards and tile crossing
             if reward > 0: tiles_crossed += 1
+            # cumulative_reward += (reward * (1-efficiencyWeight) + computeLosses(action) * efficiencyWeight)
             cumulative_reward += reward
 
             with open("time_completion.csv", 'a', newline='') as csvfile:
