@@ -7,8 +7,6 @@ from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import DummyVecEnv, VecFrameStack
 from stable_baselines3.common.callbacks import CheckpointCallback
 
-from rewardFunction import computeLosses
-
 
 class PPOAgent:
     def __init__(self, env, model=None):
@@ -32,14 +30,17 @@ class PPOAgent:
         checkpoint_callback = CheckpointCallback(
             save_freq=2500, save_path="./models/", name_prefix="ppo_car_racing_cont"
         )
-        self.model.learn(total_timesteps=1000000, callback=checkpoint_callback)
-        self.model.save("ppo_car_racing_final")
+        self.model.learn(total_timesteps=100000, callback=checkpoint_callback)
+        self.model.save("ppo_car_racing")
+
+    def predict(self, observation):
+        pass
 
 def make_env(render_mode="rgb_array", custom_reward=None):
     env = gym.make(
         "CarRacing-v2",
         render_mode=render_mode,
-        lap_complete_percent=0.6,
+        lap_complete_percent=0.95,
         domain_randomize=True,
         continuous=True,
     )
