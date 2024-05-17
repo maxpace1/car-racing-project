@@ -18,12 +18,12 @@ class QTableAgent:
 
         # Define Q-table as dictionary per: 
         #    {< State>:[Action0, Action1, Action2, Action3, Action4]}
-        self.Q_table = cur_Q_table.Q_table
+        self.Q_table = {}
 
         # Define parameters
         self.alpha = 0.9  # learning rate
         self.gamma = 0.99  # discount factor
-        self.epsilon = 0.1  # exploration rate
+        self.epsilon = 0.6  # exploration rate
 
         # For detecting stationary
         self.prevOriginal = None
@@ -202,8 +202,9 @@ if __name__ == "__main__":
         pass
 
     # Train the Q-table
-    # trained_Q_table = QTableAgent.train(env, episodes=1000, iterations=100000)
-    # print(f"{trained_Q_table} is the final Q table")
+    trained_Q_table = QTableAgent.train(env, episodes=10000, iterations=100000)
+    print(f"{trained_Q_table} is the final Q table")
+    exit()
 
     trained_Q_table = cur_Q_table.Q_table
 
@@ -337,5 +338,3 @@ if __name__ == "__main__":
 
     # Displaying the plots
     plt.show()
-
-    exit()
