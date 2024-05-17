@@ -53,16 +53,18 @@ class DQNAgent:
         self.n_actions = env.action_space.n
         # Get the shape of state observations
         self.input_shape = (3, 96, 96)
-        print(self.input_shape)
+
+        # Track the number of steps done for epsilon greedy decay
+        self.steps_done = 0
 
         # MODEL HYPERPARAMETERS
         self.batch_size = 64            # number of transitions sampled from the replay buffer
-        self.gamma = 0.95               # discount factor
+        self.gamma = 0.99               # discount factor
         self.epsilon_start = 0.9        # epsilon-greedy parameter
         self.epsilon_end = 0.05         # starting value of epsilon
         self.epsilon_decay = 1000       # controls the rate of exponential decay of epsilon, higher means a slower decay
-        self.tau = 0.005                # update rate of the target network
-        self.learning_rate = 0.001      # learning rate of the ``AdamW`` optimizer
+        self.tau = 0.05                  # update rate of the target network
+        self.learning_rate = 0.0001     # learning rate of the ``AdamW`` optimizer
 
         # use GPU if available
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -82,11 +84,12 @@ class DQNAgent:
             self.policy_net = DQN(self.input_shape, self.n_actions).load_state_dict(torch.load(self.trained_model_path))
 
 
-    def predict(self, state, t):
+    def predict(self, state):
         # Use random policy with epsilon probability, greedy o/w
         sample = random.random()
         eps_threshold = self.epsilon_end + (self.epsilon_start - self.epsilon_end) * \
-            math.exp(-1. * t / self.epsilon_decay)
+            math.exp(-1. * self.steps_done / self.epsilon_decay)
+        self.steps_done += 1
         if sample > eps_threshold:
             with torch.no_grad():
                 return self.policy_net(state).max(1).indices.view(1, 1)
@@ -158,7 +161,7 @@ class DQNAgent:
             state, _ = self.env.reset()
             state = torch.tensor(state, dtype=torch.float32, device=self.device).unsqueeze(0)
             for t in range(10000):
-                action = self.predict(state, t)
+                action = self.predict(state)
                 observation, reward, terminated, truncated, _ = self.env.step(action.item())
                 reward = torch.tensor([reward], device=self.device)
                 epidode_reward += reward
@@ -169,7 +172,7 @@ class DQNAgent:
                 else:
                     next_state = torch.tensor(observation, dtype=torch.float32, device=self.device).unsqueeze(0)
 
-                # If continually getting negative reward 10 times after the tolerance steps, terminate this episode
+                # Count steps with negative reward after first 100
                 negative_rewards = negative_rewards + 1 if t > 100 and reward < 0 else 0
 
                 # Store the transition in memory
@@ -190,9 +193,9 @@ class DQNAgent:
                     target_net_state_dict[key] = policy_net_state_dict[key]*self.tau + target_net_state_dict[key]*(1 - self.tau)
                 self.target_net.load_state_dict(target_net_state_dict)
 
+                # If continually getting negative reward 25 times after the first 100 steps, terminate this episode
                 if done or negative_rewards >= 25:
-                    print(f"Episode {i} length: {t + 1}")
-                    print(f"Episode {i} reward: {epidode_reward}")
+                    print(f"Episode {i} length: {t + 1}, reward: {epidode_reward}")
                     episode_lengths.append(t + 1)
                     episode_total_rewards.append(epidode_reward)
                     break
@@ -218,7 +221,7 @@ def make_env(render_mode="rgb_array"):
 
 
 if __name__ == "__main__":
-    env = gym.make("CarRacing-v2", render_mode="rgb_array", lap_complete_percent=0.5, domain_randomize=True, continuous=False)
+    env = gym.make("CarRacing-v2", render_mode="rgb_array", lap_complete_percent=0.75, domain_randomize=True, continuous=False)
     # env = make_env()
     agent = DQNAgent(env, True)
     agent.train()

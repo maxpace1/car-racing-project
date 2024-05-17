@@ -3,6 +3,8 @@ import numpy as np
 import cv2
 import time
 import csv
+import matplotlib.pyplot as plt
+
 import cur_Q_table
 from rewardFunction import computeLosses
 
@@ -16,12 +18,12 @@ class QTableAgent:
 
         # Define Q-table as dictionary per: 
         #    {< State>:[Action0, Action1, Action2, Action3, Action4]}
-        self.Q_table = cur_Q_table.Q_table
+        self.Q_table = {}
 
         # Define parameters
         self.alpha = 0.9  # learning rate
         self.gamma = 0.99  # discount factor
-        self.epsilon = 0.1  # exploration rate
+        self.epsilon = 0.6  # exploration rate
 
         # For detecting stationary
         self.prevOriginal = None
@@ -192,7 +194,7 @@ class QTableAgent:
         return self.Q_table
 
 if __name__ == "__main__":
-    env = gym.make('CarRacing-v2', render_mode="human", lap_complete_percent=0.5, continuous=False)
+    env = gym.make('CarRacing-v2', render_mode="human", lap_complete_percent=0.5, continuous=False, domain_randomize=False)
     QTableAgent = QTableAgent(env)
 
     # Clear rewards over training CSV file
@@ -200,30 +202,52 @@ if __name__ == "__main__":
         pass
 
     # Train the Q-table
-    # trained_Q_table = QTableAgent.train(env, episodes=1000, iterations=100000)
-    # print(f"{trained_Q_table} is the final Q table")
+    trained_Q_table = QTableAgent.train(env, episodes=10000, iterations=100000)
+    print(f"{trained_Q_table} is the final Q table")
+    exit()
 
     trained_Q_table = cur_Q_table.Q_table
 
-    # Clear time/completion mapping file
-    with open("time_completion.csv", 'w') as file:
-        pass
-
-    # Evaluate the trained Q-table
-    cumulative_reward = 0
-    tiles_crossed = 0
-    env.reset()
-    state = QTableAgent.convert_downsized_binary(env.render())
-    done = False
-
-    # init timestep
-    t = 1
-
     # weightages for reward functions
-    # efficiencyWeight = [1, 0.75, 0.5, 0.25, 0]
+    results = {}
+    weight = 1
+    plt.figure(figsize=(10, 5))  # Adjust figure size if needed
 
-    while not done and t < 300000:
-        try:
+    maxTimesteps = 100
+    avgClassicRewards = []
+    avgEfficiencyRewards = []
+
+    avgCompletion = []
+    avgCumulativeEfficiencyReward = []
+    avgCumulativeClassicReward = []
+    avgTilesCrossed = []
+
+    curClassicRewards = []
+    curEfficiencyRewards = []
+    curCompletion = []
+
+    for attempt in range(10):
+        timestep = []
+        
+        # Evaluate the trained Q-table
+        cumulative_reward_classic = 0
+        cumulative_reward_efficiency = 0
+        tiles_crossed = 0
+        env.reset()
+        state = QTableAgent.convert_downsized_binary(env.render())
+        done = False
+
+        # init timestep
+        t = 0
+
+        # actions
+        turn = 0.0
+        gas = 0.0
+        brake = 0.0
+
+        while not done and t < maxTimesteps:
+
+            # print(t)
             # Handle yet unseen states
             if trained_Q_table.get(state) is None: action = 3
 
@@ -232,17 +256,85 @@ if __name__ == "__main__":
             state, reward, done, _, info = env.step(action)
             state = QTableAgent.convert_downsized_binary(state)
 
+            match action:
+                case 1:
+                    turn -= 0.2
+                case 2:
+                    turn += 0.2
+                case 3: 
+                    gas += 0.2
+                case 4: 
+                    gas -= 0.2
+                    brake += 0.2
+                case default:
+                    continue
+
+            if turn > 0:
+                turn -= 0.1
+                turn = min(turn, 1.0)
+            if turn < 0:
+                turn += 0.1
+                turn = max(turn, -1.0)
+            gas -= 0.1
+            brake -= 0.1
+            gas = min(max(gas, 0.0), 1.0)
+            brake = min(max(brake, 0.0), 1.0)
+
             # Update rewards and tile crossing
             if reward > 0: tiles_crossed += 1
-            # cumulative_reward += (reward * (1-efficiencyWeight) + computeLosses(action) * efficiencyWeight)
-            cumulative_reward += reward
 
-            with open("time_completion.csv", 'a', newline='') as csvfile:
-                writer = csv.writer(csvfile)
-                writer.writerow([t, tiles_crossed, cumulative_reward])
+            cumulative_reward_classic += reward
+            cumulative_reward_efficiency += (reward * (1-computeLosses(action, state, converted=(turn, gas, brake))))
+
+            if attempt == 0:
+                curClassicRewards.append([])
+                curEfficiencyRewards.append([])
+                curCompletion.append([])
+
+            timestep.append(t)
+            curClassicRewards[t].append(cumulative_reward_classic)
+            curEfficiencyRewards[t].append(cumulative_reward_efficiency)
+            curCompletion[t].append(round(tiles_crossed/10, 1))
 
             t += 1
-        except KeyboardInterrupt:
-            break
+        
+        avgCumulativeEfficiencyReward.append(cumulative_reward_efficiency)
+        avgCumulativeClassicReward.append(cumulative_reward_classic)
+        avgTilesCrossed.append(tiles_crossed)
 
-    print("Total reward:", cumulative_reward, "Tiles crossed:", tiles_crossed)
+    for t in range(maxTimesteps):
+        avgClassicRewards.append(sum(curClassicRewards[t])/len(curClassicRewards[t]))
+        avgEfficiencyRewards.append(sum(curEfficiencyRewards[t])/len(curEfficiencyRewards[t]))
+        avgCompletion.append(sum(curCompletion[t])/len(curCompletion[t]))
+    
+    avgCumulativeEfficiencyReward = sum(avgCumulativeEfficiencyReward)/len(avgCumulativeEfficiencyReward)
+    avgCumulativeClassicReward = sum(avgCumulativeClassicReward)/len(avgCumulativeClassicReward)
+    avgTilesCrossed = sum(avgTilesCrossed)/len(avgTilesCrossed)
+
+    print("Average classic reward:", avgCumulativeClassicReward, "Average efficiency reward:", avgCumulativeEfficiencyReward, "Tiles crossed:", avgTilesCrossed)
+
+    print(timestep)
+    print(avgCumulativeClassicReward)
+    print(avgCumulativeEfficiencyReward)
+    print(avgCompletion)
+
+    # Creating the first plot
+    plt.subplot(1, 2, 1)  # 1 row, 2 columns, plot 1
+    plt.plot(timestep, avgClassicRewards, label='Classic')
+    plt.plot(timestep, avgEfficiencyRewards, label='Efficiency')
+    plt.xlabel('Timestep (t)')
+    plt.ylabel('Current Reward')
+    plt.title("Timestep vs Average Current Reward")
+
+    # Creating the second plot
+    plt.subplot(1, 2, 2)  # 1 row, 2 columns, plot 2
+    plt.plot(timestep, avgCompletion)
+    plt.xlabel('Timestep (t)')
+    plt.ylabel('Lap Completion (%)')
+    plt.title("Timestep vs Average Completion")
+
+    # Adjust layout to prevent overlap
+    plt.tight_layout()
+
+    # Displaying the plots
+    plt.show()

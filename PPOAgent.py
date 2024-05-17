@@ -71,7 +71,7 @@ def make_env(render_mode="rgb_array", custom_reward=None):
 env = make_vec_env(env_id=lambda: make_env(), n_envs=6)
 # env = DummyVecEnv([lambda: make_env(render_mode="human", custom_reward=computeLosses)])
 env = VecFrameStack(env, n_stack=6)
-agent = PPOAgent(env)
+agent = PPOAgent(env, model="ppo_car_racing_480000_steps")
 observation = env.reset()
 agent.train()
 # while True:
