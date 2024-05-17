@@ -18,7 +18,7 @@ class QTableAgent:
 
         # Define Q-table as dictionary per: 
         #    {< State>:[Action0, Action1, Action2, Action3, Action4]}
-        self.Q_table = {}
+        self.Q_table = cur_Q_table.Q_table
 
         # Define parameters
         self.alpha = 0.9  # learning rate
@@ -202,18 +202,17 @@ if __name__ == "__main__":
         pass
 
     # Train the Q-table
-    trained_Q_table = QTableAgent.train(env, episodes=10000, iterations=100000)
-    print(f"{trained_Q_table} is the final Q table")
-    exit()
+    # trained_Q_table = QTableAgent.train(env, episodes=10000, iterations=100000)
+    # print(f"{trained_Q_table} is the final Q table")
 
     trained_Q_table = cur_Q_table.Q_table
 
     # weightages for reward functions
     results = {}
     weight = 1
-    plt.figure(figsize=(10, 5))  # Adjust figure size if needed
+    #plt.figure(figsize=(10, 5))  # Adjust figure size if needed
 
-    maxTimesteps = 100
+    maxTimesteps = 1000
     avgClassicRewards = []
     avgEfficiencyRewards = []
 
@@ -266,8 +265,6 @@ if __name__ == "__main__":
                 case 4: 
                     gas -= 0.2
                     brake += 0.2
-                case default:
-                    continue
 
             if turn > 0:
                 turn -= 0.1
@@ -294,13 +291,15 @@ if __name__ == "__main__":
             timestep.append(t)
             curClassicRewards[t].append(cumulative_reward_classic)
             curEfficiencyRewards[t].append(cumulative_reward_efficiency)
-            curCompletion[t].append(round(tiles_crossed/10, 1))
+            curCompletion[t].append(round(tiles_crossed, 1))
 
             t += 1
         
         avgCumulativeEfficiencyReward.append(cumulative_reward_efficiency)
         avgCumulativeClassicReward.append(cumulative_reward_classic)
         avgTilesCrossed.append(tiles_crossed)
+
+        print(cumulative_reward_efficiency, cumulative_reward_classic, tiles_crossed)
 
     for t in range(maxTimesteps):
         avgClassicRewards.append(sum(curClassicRewards[t])/len(curClassicRewards[t]))
@@ -309,29 +308,33 @@ if __name__ == "__main__":
     
     avgCumulativeEfficiencyReward = sum(avgCumulativeEfficiencyReward)/len(avgCumulativeEfficiencyReward)
     avgCumulativeClassicReward = sum(avgCumulativeClassicReward)/len(avgCumulativeClassicReward)
-    avgTilesCrossed = sum(avgTilesCrossed)/len(avgTilesCrossed)
+    #avgTilesCrossed = sum(avgTilesCrossed)/len(avgTilesCrossed)
 
-    print("Average classic reward:", avgCumulativeClassicReward, "Average efficiency reward:", avgCumulativeEfficiencyReward, "Tiles crossed:", avgTilesCrossed)
+    #print("Average classic reward:", avgCumulativeClassicReward, "Average efficiency reward:", avgCumulativeEfficiencyReward, "Tiles crossed:", avgTilesCrossed)
 
     print(timestep)
-    print(avgCumulativeClassicReward)
-    print(avgCumulativeEfficiencyReward)
+    print(avgClassicRewards)
+    print(avgEfficiencyRewards)
     print(avgCompletion)
+    print(tiles_crossed)
 
     # Creating the first plot
-    plt.subplot(1, 2, 1)  # 1 row, 2 columns, plot 1
-    plt.plot(timestep, avgClassicRewards, label='Classic')
-    plt.plot(timestep, avgEfficiencyRewards, label='Efficiency')
+    plt.subplot(1, 2, 2)  # 1 row, 2 columns, plot 2
+    plt.plot(timestep, avgClassicRewards, label='Classic', color="orange")
+    plt.plot(timestep, avgEfficiencyRewards, label='Energy', color="green")
     plt.xlabel('Timestep (t)')
-    plt.ylabel('Current Reward')
-    plt.title("Timestep vs Average Current Reward")
+    plt.ylabel('Cumulative Reward')
+    plt.title("Timestep vs Cumulative Reward")
+
+    # plt.legend(bbox_to_anchor=(0.75, 1.55), ncol=2)
 
     # Creating the second plot
-    plt.subplot(1, 2, 2)  # 1 row, 2 columns, plot 2
+    plt.subplot(1, 2, 1)  # 1 row, 2 columns, plot 1
     plt.plot(timestep, avgCompletion)
     plt.xlabel('Timestep (t)')
-    plt.ylabel('Lap Completion (%)')
+    plt.ylabel('Tiles Covered')
     plt.title("Timestep vs Average Completion")
+
 
     # Adjust layout to prevent overlap
     plt.tight_layout()

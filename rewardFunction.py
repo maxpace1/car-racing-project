@@ -55,6 +55,10 @@ def computeLosses(action, observation, converted=None):
 
     braking_loss = braking_penalty_weight * brakeActuation * throttleActuation
 
+    steerActuation = round(steerActuation, 2)
+    throttleActuation = round(throttleActuation, 2)
+    brakeActuation = round(brakeActuation, 2)
+
     cumulative_losses = (steering_loss + throttle_loss + braking_loss)
     cumulative_losses = min(cumulative_losses, 1.0)
 
