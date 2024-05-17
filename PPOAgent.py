@@ -30,48 +30,36 @@ class PPOAgent:
 
     def train(self):
         checkpoint_callback = CheckpointCallback(
-            save_freq=10000, save_path="./models/", name_prefix="ppo_car_racing_eco"
+            save_freq=2500, save_path="./models/", name_prefix="ppo_car_racing_cont"
         )
         self.model.learn(total_timesteps=1000000, callback=checkpoint_callback)
         self.model.save("ppo_car_racing_final")
-
-    def predict(self, observation):
-        pass
-
 
 def make_env(render_mode="rgb_array", custom_reward=None):
     env = gym.make(
         "CarRacing-v2",
         render_mode=render_mode,
-        lap_complete_percent=1,
-        domain_randomize=False,
-        continuous=False,
+        lap_complete_percent=0.6,
+        domain_randomize=True,
+        continuous=True,
     )
 
     original_step = env.step
-
-    ##############################
-    # 1.0 is full custom reward, 0.0 is full default reward (from environment)
-    CUSTOM_REWARD_WEIGHT = 0.5
-    ##############################
+# 
+    def combine_rewards(reg_r, custom_r):
+        return (custom_r < 0) * reg_r + (custom_r >= 0) * reg_r * custom_r
 
     def new_step(action):
         out = original_step(action)
         if len(out) == 4:
             observation, reward, done, info = out
             if custom_reward is not None:
-                reward = (
-                    CUSTOM_REWARD_WEIGHT * custom_reward(action, observation)
-                    + (1 - CUSTOM_REWARD_WEIGHT) * reward
-                )
+                reward = combine_rewards(reward, 1-custom_reward(action, observation))
             return observation, reward, done, info
         elif len(out) == 5:
             observation, reward, done, info, _ = out
             if custom_reward is not None:
-                reward = (
-                    CUSTOM_REWARD_WEIGHT * custom_reward(action, observation)
-                    + (1 - CUSTOM_REWARD_WEIGHT) * reward
-                )
+                reward = combine_rewards(reward, 1-custom_reward(action, observation))
             return observation, reward, done, info, _
         else:
             return out
@@ -80,7 +68,7 @@ def make_env(render_mode="rgb_array", custom_reward=None):
     return env
 
 
-env = make_vec_env(env_id=lambda: make_env(custom_reward=computeLosses), n_envs=4)
+env = make_vec_env(env_id=lambda: make_env(), n_envs=6)
 # env = DummyVecEnv([lambda: make_env(render_mode="human", custom_reward=computeLosses)])
 env = VecFrameStack(env, n_stack=6)
 agent = PPOAgent(env)
