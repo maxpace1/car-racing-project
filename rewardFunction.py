@@ -20,7 +20,7 @@ high_rev_penalty_weight = 0.1
 braking_penalty_weight = 0.8
 
 
-def computeLosses(action, observation):
+def computeLosses(action, observation, converted=None):
     """Returns the non-positive loss (efficiency reward) attained by the current set of actions.
 
     Parameters:
@@ -31,7 +31,11 @@ def computeLosses(action, observation):
     """
 
     # check if action is discrete or continuous
-    if action is not np.ndarray:
+    if converted is not None:
+        steerActuation = converted[0]
+        throttleActuation = converted[1]
+        brakeActuation = converted[2]
+    elif action is not np.ndarray:
         steerActuation = -1 if action == 1 else 1 if action == 2 else 0
         throttleActuation = 1 if action == 3 else 0
         brakeActuation = 1 if action == 4 else 0
