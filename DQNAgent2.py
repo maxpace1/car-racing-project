@@ -58,6 +58,10 @@ def make_env(render_mode="rgb_array"):
     return env
 
 
+def combine_rewards(reg_r, custom_r):
+        return (custom_r < 0) * reg_r + (custom_r >= 0) * reg_r * custom_r
+
+
 def make_env_energy(render_mode="rgb_array", custom_reward=None):
     env = gym.make(
         "CarRacing-v2",
@@ -69,24 +73,20 @@ def make_env_energy(render_mode="rgb_array", custom_reward=None):
 
     original_step = env.step
 
-    def combine_rewards(reg_r, custom_r):
-        return (custom_r < 0) * reg_r + (custom_r >= 0) * reg_r * custom_r
-
     env.turn = 0.0
     env.gas = 0.0
     env.brake = 0.0
 
     def new_step(action):
-        match action:
-            case 1:
-                env.turn -= 0.2
-            case 2:
-                env.turn += 0.2
-            case 3: 
-                env.gas += 0.2
-            case 4: 
-                env.gas -= 0.2
-                env.brake += 0.2
+        if action == 1:
+            env.turn -= 0.2
+        elif action == 2:
+            env.turn += 0.2
+        elif action == 3: 
+            env.gas += 0.2
+        elif action == 4: 
+            env.gas -= 0.2
+            env.brake += 0.2
 
         if env.turn > 0:
             env.turn -= 0.1
@@ -142,24 +142,64 @@ def main():
                 agent.train()
 
     elif mode == "test":
-        env = DummyVecEnv([lambda: make_env(render_mode="human")])
-        # env = DummyVecEnv([lambda: make_env_energy(render_mode="human", custom_reward=computeLosses)]) # Comment out for train
-        env = VecFrameStack(env, n_stack=4)
-    
-        agent = DQNAgent2(env, model="models/dqn_car_racing_3618819_1")
+        # env = DummyVecEnv([lambda: make_env(render_mode="human")])
+        env = DummyVecEnv([lambda: make_env_energy(render_mode="human", custom_reward=computeLosses)]) # Comment out for train
+        env = VecFrameStack(env, n_stack=6)
+        agent = DQNAgent2(env, model="models/dqn_car_racing_energy_lr8e-05_tf2")
         observation = env.reset()
         done = [False]
 
+        turn = 0.0
+        gas = 0.0
+        brake = 0.0
+        timestep = 0
         tiles = 0
+        total_classic_reward = 0
+        total_energy_reward = 0
+
         tiles_array = []
-        reward_array = []
-        total_reward = 0
+        classic_reward_array = []
+        energy_reward_array = []
+        timesteps = []
+
         while not done[0]:
             action, _states = agent.model.predict(observation)
             observation, reward, done, info = env.step(action)
-            total_reward += reward
-            print(f"TOTAL REWARD: {total_reward}")
-            reward_array.append(total_reward[0])
+            total_classic_reward += reward
+
+            ### GET ENERGY REWARD ###
+            if action == 1:
+                turn -= 0.2
+            elif action == 2:
+                turn += 0.2
+            elif action == 3: 
+                gas += 0.2
+            elif action == 4: 
+                gas -= 0.2
+                brake += 0.2
+
+            if turn > 0:
+                turn -= 0.1
+                turn = min(turn, 1.0)
+            if turn < 0:
+                turn += 0.1
+                turn = max(turn, -1.0)
+            gas -= 0.1
+            brake -= 0.1
+            gas = min(max(gas, 0.0), 1.0)
+            brake = min(max(brake, 0.0), 1.0)
+
+            total_energy_reward += combine_rewards(reward, 1 - computeLosses(action, observation, converted=(turn, gas, brake)))
+            print(total_energy_reward)
+            ###
+
+            print(f"TOTAL REWARD: {total_classic_reward}")
+            classic_reward_array.append(total_classic_reward[0])
+            energy_reward_array.append(total_energy_reward[0])
+            timesteps.append(timestep)
+
+            timestep += 1
+
             if done[0] == True:
                 print("DONE")
                 # tiles = 0
@@ -181,7 +221,8 @@ def main():
         plt.title("Timestep vs Average Completion")
 
         plt.subplot(1, 2, 2)  # 1 row, 2 columns, plot 2
-        plt.plot(reward_array)
+        plt.plot(timesteps, classic_reward_array, label="Classic", color="orange")
+        plt.plot(timesteps, energy_reward_array, label="Energy", color="green")
         plt.xlabel('Timestep (t)')
         plt.ylabel('Cumulative Reward')
         plt.title("Timestep vs Cumulative Reward")
