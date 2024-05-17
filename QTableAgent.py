@@ -48,8 +48,9 @@ class QTableAgent:
         _, binary = cv2.threshold(greyscale, 150, 255, cv2.THRESH_BINARY)
         
         # Store pre and post processing for debugging
-        # cv2.imwrite("Original Image.jpg", original)
-        # cv2.imwrite("Binary Image.jpg", binary)
+        cv2.imwrite("Original Image.jpg", original)
+        cv2.imwrite("Downsized Image.jpg", downsized)
+        cv2.imwrite("Binary Image.jpg", binary)
 
         # Invert binary, making roads 1, force to float
         binary = np.int64(binary/255)
@@ -202,8 +203,9 @@ if __name__ == "__main__":
         pass
 
     # Train the Q-table
-    # trained_Q_table = QTableAgent.train(env, episodes=10000, iterations=100000)
-    # print(f"{trained_Q_table} is the final Q table")
+    trained_Q_table = QTableAgent.train(env, episodes=10000, iterations=100000)
+    print(f"{trained_Q_table} is the final Q table")
+    exit()
 
     trained_Q_table = cur_Q_table.Q_table
 
